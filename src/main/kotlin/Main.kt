@@ -18,7 +18,7 @@ import info.laht.threekt.renderers.WebGLRendererParams
 import kotlin.browser.document
 import kotlin.browser.window
 
-class HelloWorld {
+class Main {
 
     private val renderer: WebGLRenderer
     private val scene: Scene = Scene()

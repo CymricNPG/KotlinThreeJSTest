@@ -11,13 +11,18 @@ buildscript {
     ext.kotlin_version = '1.3.0'
     repositories {
         mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.moowork.gradle:gradle-node-plugin:1.2.0"
     }
 }
 
 apply plugin: 'kotlin2js'
+apply plugin: "com.moowork.node"
 
 repositories {
     mavenCentral()
@@ -25,9 +30,17 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
-	compile "info.laht.threekt:wrapper:0.88-ALPHA-6"
+    compile "info.laht.threekt:wrapper:0.88-ALPHA-6"
+    testCompile "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
 }
 
+[compileTestKotlin2Js, compileKotlin2Js]*.configure {
+    kotlinOptions.moduleKind = "umd"
+    kotlinOptions.metaInfo = true
+    kotlinOptions.sourceMap = true
+}
+
+// Assemble
 
 task assembleWeb(type: Sync) {
     configurations.compile.each { File file ->
@@ -47,3 +60,30 @@ task assembleWeb(type: Sync) {
 }
 
 assemble.dependsOn assembleWeb
+
+// Testing
+
+node {
+    download = true
+}
+
+task populateNodeModules(type: Copy, dependsOn: compileKotlin2Js) {
+    from compileKotlin2Js.destinationDir
+
+    configurations.testCompile.each {
+        from zipTree(it.absolutePath).matching { include '*.js' }
+    }
+    into "${buildDir}/node_modules"
+}
+
+task installQunit(type: NpmTask) {
+    args = ['install', 'qunitjs', 'three@0.88.0']
+}
+
+
+task runQunit(type: NodeTask, dependsOn: [compileKotlin2Js, compileTestKotlin2Js, populateNodeModules, installQunit]) {
+    script = file('node_modules/qunitjs/bin/qunit')
+    args = [projectDir.toPath().relativize(file(compileTestKotlin2Js.outputFile).toPath())]
+}
+
+test.dependsOn runQunit
