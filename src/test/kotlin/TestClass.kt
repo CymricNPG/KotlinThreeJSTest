@@ -4,7 +4,7 @@ class Test {
 
     @Test
     fun testInit() {
-        print("Hello World")
+        println("   Hello World")
     }
 
 }
